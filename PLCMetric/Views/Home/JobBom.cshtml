@@ -1,0 +1,115 @@
+﻿@model List<PerformanceReportOutput>
+@{
+    ViewData["Title"] = "Job BOM";
+}
+
+<div class="alert alert-danger text-center" role="alert">
+    <h3>Job BOM Metric</h3>
+</div>
+<div class="mt-4 accordion">
+    @foreach (var metricItem in Model)
+    {
+        @await Html.PartialAsync("_Metric", metricItem)
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let globalMaxTime = 0;
+            let globalMaxMemory = 0;
+            $('.session').each(function () {
+                $(this).find('tr[data-time]').each(function () {
+                    const time = $(this).data('time');
+                    const memory = $(this).data('memory');
+                    if (time > globalMaxTime) {
+                        globalMaxTime = time;
+                    }
+                    if (memory > globalMaxMemory) {
+                        globalMaxMemory = memory;
+                    }
+                });
+            });
+
+            const roundToNearestHundred = (num) => Math.ceil(num / 100) * 100;
+            const maxTimeScale = roundToNearestHundred(globalMaxTime);
+            const maxMemoryScale = roundToNearestHundred(globalMaxMemory);
+
+            $('.timeChart').each(function () {
+                const canvas = $(this);
+                const sessionNode = canvas.closest('.session');
+                const timeData = {
+                    labels: [],
+                    datasets: [{
+                        label: 'Execution Time (ms)',
+                        data: [],
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                };
+
+                sessionNode.find('tr[data-time]').each(function () {
+                    const name = $(this).data('name');
+                    const time = $(this).data('time');
+
+                    timeData.labels.push(name);
+                    timeData.datasets[0].data.push(time);
+                });
+
+                new Chart(canvas[0], {
+                    type: 'bar',
+                    data: timeData,
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                max: maxTimeScale,
+                            }
+                        },
+                    }
+                });
+            });
+
+            $('.memoryChart').each(function () {
+                const canvas = $(this);
+                const sessionNode = canvas.closest('.session');
+
+                const memoryData = {
+                    labels: [],
+                    datasets: [{
+                        label: 'Memory Usage (MB)',
+                        data: [],
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                };
+
+                sessionNode.find('tr[data-memory]').each(function () {
+                    const name = $(this).data('name');
+                    const memory = $(this).data('memory');
+
+                    memoryData.labels.push(name);
+                    memoryData.datasets[0].data.push(memory);
+                });
+
+                new Chart(canvas[0], {
+                    type: 'bar',
+                    data: memoryData,
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        scales: {
+                            x: {
+                                max: maxMemoryScale,
+                            }
+                        },
+                    }
+                });
+            });
+        });
+    </script>
+}
